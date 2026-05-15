@@ -156,8 +156,9 @@
   // STATE
   // ─────────────────────────────────────────
   const state = {
+    className: '5학년 2반',
     section: 'dashboard',
-    month: new Date(2026, 4, 1), // May 2026
+    month: new Date(),
     attendance: {},              // { id: { 'YYYY-MM-DD': status } }
     memos: {},                   // { id: string }
     records: {},                 // { id: [ { id, date, cat, content } ] }
@@ -172,16 +173,14 @@
   // ─────────────────────────────────────────
   // LOCAL STORAGE
   // ─────────────────────────────────────────
-  const KEYS = { att: 'klsm_att', memos: 'klsm_memos', rec: 'klsm_rec' };
+  const KEYS = { att: 'klsm_att', memos: 'klsm_memos', rec: 'klsm_rec', cls: 'klsm_cls' };
 
   function loadStorage() {
     try {
-      const a = localStorage.getItem(KEYS.att);
-      if (a) state.attendance = JSON.parse(a);
-      const m = localStorage.getItem(KEYS.memos);
-      if (m) state.memos = JSON.parse(m);
-      const r = localStorage.getItem(KEYS.rec);
-      if (r) state.records = JSON.parse(r);
+      const a  = localStorage.getItem(KEYS.att);  if (a)  state.attendance = JSON.parse(a);
+      const m  = localStorage.getItem(KEYS.memos); if (m)  state.memos     = JSON.parse(m);
+      const r  = localStorage.getItem(KEYS.rec);  if (r)  state.records   = JSON.parse(r);
+      const cn = localStorage.getItem(KEYS.cls);  if (cn) state.className  = cn;
     } catch (_) {}
   }
 
@@ -195,6 +194,10 @@
 
   function saveRec() {
     try { localStorage.setItem(KEYS.rec, JSON.stringify(state.records)); } catch (_) {}
+  }
+
+  function saveClassName() {
+    try { localStorage.setItem(KEYS.cls, state.className); } catch (_) {}
   }
 
   // ─────────────────────────────────────────
@@ -470,32 +473,36 @@
   // ─────────────────────────────────────────
   function renderDashboard() {
     const { present, recTotal } = getStats();
-    const todayRate = present === 0 ? '미기록' : `${Math.round(present / 18 * 100)}%`;
+    const total    = STUDENTS.length;
+    const males    = STUDENTS.filter(s => s.gender === 'male').length;
+    const females  = total - males;
+    const todayRate = total === 0 ? '—' : present === 0 ? '미기록' : `${Math.round(present / total * 100)}%`;
+    const year     = new Date().getFullYear();
 
     document.getElementById('section-dashboard').innerHTML = `
       <div class="page-header">
-        <h1 class="page-title">5학년 2반 대시보드</h1>
-        <p class="page-subtitle">2026학년도 · 담임교사 관리 시스템</p>
+        <h1 class="page-title">${esc(state.className)} 대시보드</h1>
+        <p class="page-subtitle">${year}학년도 · 담임교사 관리 시스템</p>
       </div>
 
       <div class="stat-grid">
         <div class="stat-card">
           <span class="stat-icon">👨‍👩‍👧‍👦</span>
           <div class="stat-label">총 학생 수</div>
-          <div class="stat-value">18<span class="stat-value-unit">명</span></div>
-          <div class="stat-sub">남학생 9명 · 여학생 9명</div>
+          <div class="stat-value">${total}<span class="stat-value-unit">명</span></div>
+          <div class="stat-sub">남학생 ${males}명 · 여학생 ${females}명</div>
         </div>
         <div class="stat-card">
           <span class="stat-icon">✅</span>
           <div class="stat-label">오늘 출석률</div>
           <div class="stat-value">${todayRate}</div>
-          <div class="stat-sub">출석 ${present}명 / 전체 18명</div>
+          <div class="stat-sub">출석 ${present}명 / 전체 ${total}명</div>
         </div>
         <div class="stat-card">
           <span class="stat-icon">📋</span>
           <div class="stat-label">누가 기록 총 건수</div>
           <div class="stat-value">${recTotal}<span class="stat-value-unit">건</span></div>
-          <div class="stat-sub">18명 학생 전체 누적</div>
+          <div class="stat-sub">${total}명 학생 전체 누적</div>
         </div>
       </div>
 
@@ -541,7 +548,7 @@
     document.getElementById('section-students').innerHTML = `
       <div class="page-header">
         <h1 class="page-title">학생 목록</h1>
-        <p class="page-subtitle">5학년 2반 전체 학생 현황</p>
+        <p class="page-subtitle">${esc(state.className)} 전체 학생 현황</p>
       </div>
       ${state.csvConnected
         ? `<div class="csv-status connected">● students.csv 자동 연결됨</div>`
@@ -973,6 +980,40 @@
   }
 
   // ─────────────────────────────────────────
+  // 학급 이름 인라인 편집
+  // ─────────────────────────────────────────
+  function initClassNameEdit() {
+    const el = document.querySelector('.nav-title');
+    if (!el) return;
+    el.textContent = state.className;
+    el.title = '클릭하여 학급 이름 변경';
+    el.style.cursor = 'pointer';
+
+    el.addEventListener('click', () => {
+      const inp = document.createElement('input');
+      inp.value = state.className;
+      inp.style.cssText = 'font:inherit;background:transparent;border:none;border-bottom:2px solid var(--indigo);outline:none;width:130px;color:inherit;padding:0;';
+      el.replaceWith(inp);
+      inp.focus(); inp.select();
+
+      const commit = () => {
+        const val = inp.value.trim() || state.className;
+        state.className = val;
+        saveClassName();
+        const newEl = document.createElement('div');
+        newEl.className = 'nav-title';
+        inp.replaceWith(newEl);
+        initClassNameEdit();
+        document.title = `${val} 학생 관리`;
+        if (state.section === 'dashboard') renderDashboard();
+        if (state.section === 'students')  renderStudents();
+      };
+      inp.addEventListener('blur', commit);
+      inp.addEventListener('keydown', e => { if (e.key === 'Enter') inp.blur(); if (e.key === 'Escape') { inp.value = state.className; inp.blur(); } });
+    });
+  }
+
+  // ─────────────────────────────────────────
   // INIT
   // ─────────────────────────────────────────
   async function init() {
@@ -981,6 +1022,9 @@
     const csvRecLoaded = await loadCSVRecords();
     initDemoAttendance();
     if (!csvRecLoaded) initDemoRecords();
+
+    document.title = `${state.className} 학생 관리`;
+    initClassNameEdit();
 
     document.querySelectorAll('.nav-tab').forEach(btn => {
       btn.addEventListener('click', () => navigate(btn.dataset.section));
