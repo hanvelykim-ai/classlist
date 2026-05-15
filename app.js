@@ -163,6 +163,7 @@
     memos: {},                   // { id: string }
     records: {},                 // { id: [ { id, date, cat, content } ] }
     csvConnected: false,
+    dataSource: '',
     recSid: 1,                   // selected student in records view
     recKeywords: [],             // AI 작성용 선택 키워드
     recMemo: '',                 // AI 작성용 한 줄 메모
@@ -329,15 +330,34 @@
   }
 
   async function loadCSVData() {
+    // 1순위: 구글 스프레드시트 (서버 프록시)
+    try {
+      const resp = await fetch('/fetch-sheet');
+      if (resp.ok) {
+        const text   = await resp.text();
+        const parsed = csvToStudents(text);
+        if (parsed && parsed.length > 0) {
+          STUDENTS.length = 0;
+          parsed.forEach(s => STUDENTS.push(s));
+          state.csvConnected = true;
+          state.dataSource   = 'sheet';
+          return;
+        }
+      }
+    } catch (_) {}
+
+    // 2순위: 로컬 students.csv
     try {
       const resp = await fetch('./students.csv');
-      if (!resp.ok) return;
-      const text   = await resp.text();
-      const parsed = csvToStudents(text);
-      if (parsed && parsed.length > 0) {
-        STUDENTS.length = 0;
-        parsed.forEach(s => STUDENTS.push(s));
-        state.csvConnected = true;
+      if (resp.ok) {
+        const text   = await resp.text();
+        const parsed = csvToStudents(text);
+        if (parsed && parsed.length > 0) {
+          STUDENTS.length = 0;
+          parsed.forEach(s => STUDENTS.push(s));
+          state.csvConnected = true;
+          state.dataSource   = 'csv';
+        }
       }
     } catch (_) {}
   }
@@ -551,8 +571,8 @@
         <p class="page-subtitle">${esc(state.className)} 전체 학생 현황</p>
       </div>
       ${state.csvConnected
-        ? `<div class="csv-status connected">● students.csv 자동 연결됨</div>`
-        : `<div class="csv-status">● CSV 미연결 — <strong>시작.bat</strong>으로 실행하면 자동 연결됩니다</div>`}
+        ? `<div class="csv-status connected">● ${state.dataSource === 'sheet' ? '구글 스프레드시트' : 'students.csv'} 연결됨</div>`
+        : `<div class="csv-status">● 데이터 미연결 — <strong>시작.bat</strong>으로 실행하면 자동 연결됩니다</div>`}
       <div class="toolbar">
         <input id="s-search" type="search" class="search-input"
           placeholder="이름 또는 번호로 검색..."

@@ -10,7 +10,23 @@ const MIME = {
   '.csv':  'text/csv; charset=utf-8',
 };
 
+const SHEET_URL = 'https://docs.google.com/spreadsheets/d/1chXtbam0zM_nGMOm2_sDYG6v7pnNT3hDTOTUEmwY_qU/export?format=csv&gid=0';
+
 http.createServer((req, res) => {
+  if (req.method === 'GET' && req.url === '/fetch-sheet') {
+    fetch(SHEET_URL)
+      .then(r => r.text())
+      .then(text => {
+        res.writeHead(200, { 'Content-Type': 'text/csv; charset=utf-8' });
+        res.end(text);
+      })
+      .catch(err => {
+        res.writeHead(502);
+        res.end('Sheet fetch error: ' + err.message);
+      });
+    return;
+  }
+
   if (req.method === 'POST' && req.url === '/save-records') {
     let body = '';
     req.on('data', chunk => { body += chunk.toString('utf8'); });
