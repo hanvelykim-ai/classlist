@@ -329,24 +329,31 @@
     return students.length > 0 ? students : null;
   }
 
-  async function loadCSVData() {
-    // 1순위: 구글 스프레드시트 (서버 프록시)
-    try {
-      const resp = await fetch('/fetch-sheet');
-      if (resp.ok) {
-        const text   = await resp.text();
-        const parsed = csvToStudents(text);
-        if (parsed && parsed.length > 0) {
-          STUDENTS.length = 0;
-          parsed.forEach(s => STUDENTS.push(s));
-          state.csvConnected = true;
-          state.dataSource   = 'sheet';
-          return;
-        }
-      }
-    } catch (_) {}
+  const SHEET_CSV_URL = (typeof CONFIG !== 'undefined' && CONFIG.SHEET_URL) || '';
 
-    // 2순위: 로컬 students.csv
+  async function tryLoadSheet(url) {
+    const resp = await fetch(url);
+    if (!resp.ok) return false;
+    const text   = await resp.text();
+    const parsed = csvToStudents(text);
+    if (!parsed || parsed.length === 0) return false;
+    STUDENTS.length = 0;
+    parsed.forEach(s => STUDENTS.push(s));
+    state.csvConnected = true;
+    state.dataSource   = 'sheet';
+    return true;
+  }
+
+  async function loadCSVData() {
+    // 1순위: 구글 스프레드시트 직접 fetch (호스팅 환경)
+    if (SHEET_CSV_URL) {
+      try { if (await tryLoadSheet(SHEET_CSV_URL)) return; } catch (_) {}
+    }
+
+    // 2순위: 로컬 서버 프록시 (시작.bat 환경)
+    try { if (await tryLoadSheet('/fetch-sheet')) return; } catch (_) {}
+
+    // 3순위: 로컬 students.csv
     try {
       const resp = await fetch('./students.csv');
       if (resp.ok) {
