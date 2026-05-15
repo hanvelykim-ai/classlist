@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>5학년 2반 학생 관리</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+
+    <div class="nav-wrapper">
+      <nav id="topnav">
+        <div class="nav-brand">
+          <span class="nav-logo">✏️</span>
+          <div>
+            <div class="nav-title">5학년 2반</div>
+            <div class="nav-subtitle">학생 관리 시스템</div>
+          </div>
+        </div>
+        <div class="nav-tabs">
+          <button class="nav-tab" data-section="dashboard">대시보드</button>
+          <button class="nav-tab" data-section="students">학생 목록</button>
+          <button class="nav-tab" data-section="attendance">출석 관리</button>
+          <button class="nav-tab" data-section="records">누가 기록</button>
+        </div>
+      </nav>
+    </div>
+
+    <main id="main">
+      <section id="section-dashboard"></section>
+      <section id="section-students" hidden></section>
+      <section id="section-attendance" hidden></section>
+      <section id="section-records" hidden></section>
+    </main>
+
+    <div id="detail-overlay" class="detail-overlay hidden">
+      <div id="detail-panel" class="detail-panel"></div>
+    </div>
+
+  </div>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
